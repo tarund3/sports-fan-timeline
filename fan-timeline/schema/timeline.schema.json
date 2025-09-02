@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["game_id", "timeline"],
+  "additionalProperties": false,
+  "properties": {
+    "game_id": {"type": "string"},
+    "timeline": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["ts", "event", "fan_sentiment"],
+        "additionalProperties": false,
+        "properties": {
+          "ts": {"type": "string", "pattern": "^(Q[1-4]|OT\\d?)\\s\\d{2}:\\d{2}$|^\\d{2}:\\d{2}–\\d{2}:\\d{2}$"},
+          "event": {"type": "string", "minLength": 4, "maxLength": 160},
+          "fan_sentiment": {"type": "string", "enum": ["pos", "neg", "mixed"]}
+        }
+      }
+    },
+    "top_themes": {"type": "array", "items": {"type": "string"}, "maxItems": 6},
+    "notes": {"type": "string"}
+  }
+}

@@ -1,0 +1,38 @@
+# Paths
+paths:
+  reddit_dir: data/reddit
+  pbp_dir: data/pbp
+  sft_out: data/sft/sft_data.jsonl
+  schema_path: schema/timeline.schema.json
+
+# Windowing
+window:
+  seconds: 60 # 60-second windows
+  overlap: false
+  max_chars: 3500 # cap window text
+  top_k_upvoted: 8 # take top-K by score
+  sample_extra: 12 # plus a sample of others
+
+# Sentiment thresholds
+sentiment:
+  tau_pos: 0.15
+  tau_neg: -0.15
+  trim_percentile: 0.9 # trim extreme users
+
+# Teacher writer rules
+teacher:
+  max_event_len: 120
+  include_quote: true
+
+# Training (QLoRA)
+train:
+  base_model: meta-llama/Meta-Llama-3.1-8B-Instruct # or Qwen/Qwen2-7B-Instruct
+  output_dir: outputs/sft-llama3-8b
+  epochs: 3
+  lr: 2e-4
+  lora_rank: 16
+  lora_alpha: 32
+  dropout: 0.05
+  max_seq_len: 3072
+  micro_batch_size: 1
+  gradient_accumulation: 8

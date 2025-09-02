@@ -1,0 +1,22 @@
+hardware:
+  device_map: auto
+  torch_dtype: float16
+  use_4bit: false
+  use_8bit: true
+paths:
+  output_dir: outputs/sft_mini
+  sft_data: sft_data.jsonl
+train:
+  base_model: microsoft/DialoGPT-medium
+  dropout: 0.1
+  epochs: 1
+  eval_steps: 50
+  gradient_accumulation: 4
+  logging_steps: 10
+  lora_alpha: 16
+  lora_rank: 8
+  lr: 5e-4
+  max_seq_len: 1024
+  micro_batch_size: 1
+  save_steps: 100
+  warmup_steps: 10

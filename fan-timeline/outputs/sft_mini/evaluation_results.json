@@ -1,0 +1,18 @@
+[
+  {
+    "prompt": "You are a sports timeline generator. Given fan comments from a game thread, create a concise event summary with sentiment.\n\n[CONTEXT]\ngame_id=2019-12-01-LAL-DAL\nquarter=Q1 window=11:59 score_before=0-0 score_after=0-0\n\n[COMMENTS]\n\u2022 What a game!\n\u2022 This is amazing\n\u2022 Great shot!",
+    "generated": "{\"timeline\": [{\"ts\": \"OT10 02:59\", \"event\": \"Game action continues. \\\"What a game\\\"\", \"fan_sentiment\": \"mixed\"}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}",
+    "validation": {
+      "valid": false,
+      "error": "JSON decode error: Extra data: line 1 column 114 (char 113)"
+    }
+  },
+  {
+    "prompt": "You are a sports timeline generator. Given fan comments from a game thread, create a concise event summary with sentiment.\n\n[CONTEXT]\ngame_id=2020-01-16-BOS-MIL\nquarter=Q2 window=10:30 score_before=45-42 score_after=50-45\n\n[COMMENTS]\n\u2022 Terrible call\n\u2022 Refs are awful\n\u2022 Can't believe this",
+    "generated": "game\n{\"timeline\": [{\"ts\": \"OT114 08:30\", \"event\": \"Game action continues. \\\"Terrible call\\\"\", \"fan_sentiment\": \"pos\"}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}",
+    "validation": {
+      "valid": false,
+      "error": "JSON decode error: Extra data: line 1 column 115 (char 114)"
+    }
+  }
+]

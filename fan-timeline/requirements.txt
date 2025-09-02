@@ -1,0 +1,26 @@
+# Core
+pydantic>=2.7
+fastapi>=0.111
+uvicorn>=0.30
+streamlit>=1.37
+numpy>=1.26
+pandas>=2.2
+scikit-learn>=1.5
+vaderSentiment>=3.3.2
+jsonschema>=4.23
+
+# ML (optional but recommended)
+transformers>=4.42
+accelerate>=0.33
+peft>=0.11
+trl>=0.9
+datasets>=2.20
+timeline==0.0.7
+
+# bitsandbytes is optional and CUDA/Linux specific; skip on macOS if it fails
+# bitsandbytes>=0.43
+
+# Utils
+tqdm>=4.66
+pyyaml>=6.0.1
+requests>=2.31

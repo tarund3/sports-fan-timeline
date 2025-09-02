@@ -1,0 +1,98 @@
+[
+  {
+    "period": 1,
+    "clock": "12:00",
+    "team": "DAL",
+    "points": 0,
+    "desc": "Start of 1st Period",
+    "game_id": "2019-12-01-LAL-DAL"
+  },
+  {
+    "period": 1,
+    "clock": "11:45",
+    "team": "LAL",
+    "points": 0,
+    "desc": "Jump Ball",
+    "game_id": "2019-12-01-LAL-DAL"
+  },
+  {
+    "period": 1,
+    "clock": "11:30",
+    "team": "DAL",
+    "points": 2,
+    "desc": "Made 2PT Jump Shot",
+    "game_id": "2019-12-01-LAL-DAL"
+  },
+  {
+    "period": 2,
+    "clock": "12:00",
+    "team": "LAL",
+    "points": 0,
+    "desc": "Start of 2nd Period",
+    "game_id": "2019-12-01-LAL-DAL"
+  },
+  {
+    "period": 2,
+    "clock": "11:30",
+    "team": "DAL",
+    "points": 3,
+    "desc": "Made 3PT Jump Shot",
+    "game_id": "2019-12-01-LAL-DAL"
+  },
+  {
+    "period": 2,
+    "clock": "10:45",
+    "team": "LAL",
+    "points": 1,
+    "desc": "Made Free Throw",
+    "game_id": "2019-12-01-LAL-DAL"
+  },
+  {
+    "period": 3,
+    "clock": "12:00",
+    "team": "DAL",
+    "points": 0,
+    "desc": "Start of 3rd Period",
+    "game_id": "2019-12-01-LAL-DAL"
+  },
+  {
+    "period": 3,
+    "clock": "11:15",
+    "team": "LAL",
+    "points": 2,
+    "desc": "Made 2PT Layup",
+    "game_id": "2019-12-01-LAL-DAL"
+  },
+  {
+    "period": 3,
+    "clock": "10:30",
+    "team": "DAL",
+    "points": 3,
+    "desc": "Made 3PT Jump Shot",
+    "game_id": "2019-12-01-LAL-DAL"
+  },
+  {
+    "period": 4,
+    "clock": "12:00",
+    "team": "LAL",
+    "points": 0,
+    "desc": "Start of 4th Period",
+    "game_id": "2019-12-01-LAL-DAL"
+  },
+  {
+    "period": 4,
+    "clock": "11:00",
+    "team": "DAL",
+    "points": 2,
+    "desc": "Made 2PT Dunk",
+    "game_id": "2019-12-01-LAL-DAL"
+  },
+  {
+    "period": 4,
+    "clock": "10:15",
+    "team": "LAL",
+    "points": 1,
+    "desc": "Made Free Throw",
+    "game_id": "2019-12-01-LAL-DAL"
+  }
+]

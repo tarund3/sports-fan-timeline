@@ -1,0 +1,28 @@
+# Mini dataset training configuration for Day 3
+# Conservative settings for quick debugging and smoke testing
+
+paths:
+  sft_data: "sft_data.jsonl"
+  output_dir: "outputs/sft_mini"
+
+train:
+  base_model: "microsoft/DialoGPT-medium"  # Smaller model for quick testing
+  epochs: 1
+  lr: 5e-4  # Higher learning rate for fast learning
+  micro_batch_size: 1
+  gradient_accumulation: 4
+  max_seq_len: 1024
+  lora_rank: 8  # Lower rank for mini training
+  lora_alpha: 16
+  dropout: 0.1
+  warmup_steps: 10
+  logging_steps: 10
+  eval_steps: 50  # Evaluate every 50 steps for mini dataset
+  save_steps: 100
+
+# Hardware settings
+hardware:
+  use_8bit: true
+  use_4bit: false
+  device_map: "auto"
+  torch_dtype: "float16"

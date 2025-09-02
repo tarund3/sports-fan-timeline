@@ -1,0 +1,381 @@
+# Sports Fan Thread → Timeline + Sentiment — Product Requirements Document (PRD)
+
+## 0) One-liner
+
+Turn chaotic live Reddit game threads into a **clean, minute-by-minute fan timeline** with sentiment and top themes — tuned on public Reddit threads + open NBA play-by-play. Ship a working fine-tuned model + Streamlit demo in \~4 days.
+
+---
+
+## 1) Output contract (required)
+
+The model **must output only** this JSON (single game). This is the canonical contract your service and downstream clients rely on:
+
+```json
+{
+  "game_id": "2019-12-01-LAL-DAL",
+  "timeline": [
+    {"ts": "Q1 10:32", "event": "LeBron opens the scoring in transition.", "fan_sentiment": "pos"},
+    {"ts": "Q1 03:05", "event": "Mavs go on 10-2 run; Lakers cold from three.", "fan_sentiment": "neg"},
+    {"ts": "Q2 01:17", "event": "Bench unit stabilizes; AD blocks two shots.", "fan_sentiment": "mixed"}
+  ],
+  "top_themes": ["3PT streaks", "bench impact", "ref calls"],
+  "notes": "If play-by-play time unknown, use ~~MM:SS real-time bins~~."
+}
+```
+
+**Schema highlights**
+
+* `ts`: e.g., `Q3 02:13` (fallback: `00:00–00:59` real-time window if alignment fails).
+* `fan_sentiment`: one of `pos`, `neg`, `mixed`.
+* `top_themes`: 3–5 short phrases.
+* **Strict rule:** model output must be valid JSON that validates against the timeline schema (see section *Timeline Schema*).
+
+Acceptance tests will fail if the model emits any prose outside this JSON.
+
+---
+
+## 2) Goals & success metrics
+
+### Primary goals (MVP)
+
+1. Produce accurate, human-like, concise event summaries per 60s window for a single game.
+2. Assign sensible fan sentiment (`pos|neg|mixed`) per window.
+3. Produce 3–5 top themes per game.
+4. Serve output via a Streamlit demo & an API endpoint that returns the JSON contract.
+
+### Success metrics (targets for demo)
+
+* **JSON validity rate:** ≥ 98% on held-out games.
+* **Coverage (recall of big PBP events):** ≥ 70% of lead changes, 8+ runs, and 3+ scoring plays (±90s).
+* **Sentiment macro-F1:** ≥ 0.60 vs. a reference classifier (pos/neg/mixed).
+* **Redundancy:** ≤ 10% duplicate adjacent events.
+* **Latency:** < 200ms per 60s window inference (GPU), < 80ms preferred on modest GPU w/ caching.
+* **Demo readiness:** End-to-end pipeline (ingest → teacher → train → serve) working on 100 games.
+
+---
+
+## 3) Scope (in / out)
+
+### In-scope (MVP)
+
+* Historical post-hoc mode for finished games (best first target).
+* Processing NBA threads + PBP to create training data (teacher pipeline).
+* QLoRA fine-tune on an 8B-class model for on-prem inference.
+* Streamlit demo with timeline, hoverable comments, theme chips, and JSON copy button.
+
+### Out-of-scope (initial)
+
+* Live broadcast-synced, low-latency ingest from Reddit in real-time (stretch).
+* Multi-sport support (stretch).
+* Moderation/abuse filtering beyond simple profanity removal (follow-up).
+* Production-grade scaling or multi-tenant hosted API (later).
+
+---
+
+## 4) Target users & user stories
+
+### Users
+
+* Sports fans wanting a concise timeline
+* Writers/analysts looking to quickly surface fan sentiment
+* Product demo viewers / recruiters (you want something resume-worthy)
+
+### Key user stories
+
+1. As a fan, I want a minute-by-minute timeline with sentiment, so I can relive the game's fan narrative.
+2. As an analyst, I want top themes to identify recurring conversation threads.
+3. As a developer, I want the model to return strict JSON so I can programmatically ingest into dashboards.
+
+---
+
+## 5) Data sources & required fields
+
+**Primary**
+
+* Reddit game threads (r/nba live threads): JSON dumps, Kaggle corpora, or your own archived `.jsonl` per game.
+* NBA play-by-play (PBP) + box scores: periods, clocks, scoring events, substitutions, fouls.
+
+**Optional enrichers**
+
+* Team rosters / player aliases mapping (resolve nicknames).
+* Schedule metadata (start time, timezone, home/away).
+* Upvote counts & author ids (for weighting + per-user caps).
+
+**Size recommendation**
+
+* Start: 100–200 games → produces \~10–20k windows.
+* Target for better performance: 200–500 games (20–50k windows).
+
+---
+
+## 6) Teacher pipeline (create SFT pairs — no human labeling)
+
+**Overview**
+Automate label synthesis with PBP + Reddit signals (upvotes, comment text). Produce `(input_prompt, output_json)` pairs (one window → single timeline element).
+
+**Steps**
+
+A. **Ingest & normalize**
+
+* Parse Reddit `.jsonl` threads; dedupe, strip long quotes, remove images/links (keep short quotes).
+* Parse PBP to canonical events with timestamps & normalized `Q` + clock.
+
+B. **Time alignment**
+
+* Map Reddit UTC timestamps to game clock by using schedule start time and simple linear mapping. When uncertain, use **60s real-time bins** and store overlapping PBP windows.
+* If mapping fails, fallback to `window = real-time 00:00–00:59`.
+
+C. **Windowing**
+
+* Create windows: `(quarter, clock window)` default = 60-second sliding or non-overlapping bins.
+* For each window, collect:
+
+  * top-K comments by upvotes + stratified sample of others (limit token budget to \~2–4k chars).
+  * PBP features: score\_before/after, scoring events, run length, turnovers, fouls.
+
+D. **Teacher label generation (distant supervision)**
+
+* **Event summary:** templated generator from PBP features + 1–2 short fan quotes. Keep it concise (≤28 tokens preferable).
+* **Sentiment:** aggregated sentiment from comments (use a small lexicon/classifier or VADER) weighted by upvotes with trimmed mean. Apply thresholds τ\_pos, τ\_neg → else `mixed`.
+* **Top themes:** TF-IDF / chunked n-grams across game, filter for frequency ≥3 windows.
+
+E. **SFT pair composition**
+
+* **Input prompt:** `[CONTEXT]` (game meta, window, scores), `[COMMENTS]` list, small PBP context.
+* **Output:** single JSON object containing one-element `timeline` (for that window).
+* Build many windows → concatenate per game at serving time (or train a model variant to output full game).
+
+---
+
+## 7) Fine-tuning recipe (recommended: QLoRA + small DPO)
+
+**Base models (MVP choices)**
+
+* Llama-3.1-8B-Instruct or Qwen2-7B-Instruct.
+* Use quantized weights for inference.
+
+**SFT setup**
+
+* Format: system message: `Output valid JSON that matches the schema. No prose.`
+* Tokenization: ensure max input \~2k–3k tokens (window-based training).
+* Hyperparams (starting point): rank=16, α=32, dropout=0.05, lr=2e-4 (cosine), 3–4 epochs, batch size tuned to GPU memory.
+
+**DPO / fine polishing**
+
+* Small DPO pass (500–1k high-quality pairs) to prefer concise, evidence-backed events and penalize hallucinated star mentions.
+
+**Tooling**
+
+* PEFT/QLoRA implementation (bitsandbytes, peft, trl).
+* vLLM for fast inference & batching.
+
+**Data volume**
+
+* 10–20k windows (\~100–200 games) for a solid demo.
+* More data yields diminishing returns but improves robustness to noise.
+
+---
+
+## 8) Evaluation (automatic + quick human checks)
+
+**Automatic metrics**
+
+* **JSON validity rate:** fraction of outputs that pass schema validator (target ≥98%).
+* **Coverage:** % of PBP “big events” covered in timeline (±90s).
+* **Redundancy:** duplicate suppression rate (target ≤10%).
+* **Sentiment F1:** macro-F1 vs. reference aggregated classifier.
+* **ROUGE-1/2:** sanity check vs. teacher outputs (do not over-optimize).
+* **Latency:** per-window inference time.
+
+**Quick human checks**
+
+* Sample 10 games; human inspect: faithfulness, unnatural phrasing, hallucinations.
+* Check hallucinated player names and any invented claims.
+
+**Acceptance criteria**
+
+* JSON validity ≥98%, Coverage ≥70%, Sentiment Macro-F1 ≥0.60, Redundancy ≤10%.
+
+---
+
+## 9) Guardrails & inference rules
+
+* **Schema enforcement:** run validator; on invalid output, retry once with a constrained instruction: “Return only valid JSON; shorten event to ≤120 chars.”
+* **Evidence constraint:** event must contain ≥1 token present in comments/PBP for that window (soft rule; log violations).
+* **Dedup filter:** suppress events within 90s that are near-duplicates (cosine similarity threshold).
+* **User caps:** cap contribution influence per Reddit author (prevent single-user dominance).
+* **No hallucinated names:** if name token not present in evidence, avoid explicit star attribution.
+
+---
+
+## 10) Minimal demo (Streamlit)
+
+**Core screens**
+
+* **Game selector:** choose a finished game (upload PBP + thread or pick pre-ingested game).
+* **Center:** timeline rows (one per window) with:
+
+  * `ts`, one-line `event` summary, emoji sentiment badge.
+  * Hover or expand: shows 2–3 representative comments and PBP snippet.
+* **Right rail:** `top_themes` chips — click to filter timeline.
+* **Buttons:** `Copy JSON`, `Download JSON`, `Regenerate game` (re-run model).
+* **Mode toggle:** post-hoc vs. live-simulated (for demo, simulate streaming playback).
+
+**UX constraints**
+
+* Always display the evidence (comments + PBP) behind an event to build trust.
+* Show a small “confidence” indicator per row (optional).
+
+---
+
+## 11) API & serve contract
+
+**Endpoint**: `POST /v1/timeline/generate`
+**Payload**:
+
+```json
+{
+  "game_id": "2019-12-01-LAL-DAL",
+  "reddit_thread_json": "...",   // optional if pre-ingested
+  "pbp_json": "...",            // optional if pre-ingested
+  "mode": "post_hoc"            // "post_hoc" or "live_sim"
+}
+```
+
+**Response**: the JSON output contract (only the schema JSON).
+
+**Error behavior**
+
+* 400 if inputs missing / malformed.
+* 500 if model errors; return structured error JSON (not in contract).
+
+---
+
+## 12) File layout (recommended)
+
+```
+fan-timeline/
+├─ configs/
+│  └─ nba.yaml
+├─ data/
+│  ├─ reddit/                 # jsonl per game
+│  └─ pbp/                    # pbp json per game
+├─ schema/
+│  └─ timeline.schema.json
+├─ src/
+│  └─ timeline/
+│     ├─ ingest_reddit.py
+│     ├─ parse_pbp.py
+│     ├─ align_time.py
+│     ├─ windowing.py
+│     ├─ teacher.py
+│     ├─ make_sft.py
+│     ├─ train_sft.py
+│     ├─ eval_harness.py
+│     └─ serve.py
+└─ app/
+   └─ streamlit_app.py
+```
+
+---
+
+## 13) 4-day build plan (focus & deliverables)
+
+**Day 1 — Ingest & alignment**
+
+* Tasks:
+
+  * Collect 100 games: Reddit threads + PBP (jsonl).
+  * Implement `ingest_reddit.py`, `parse_pbp.py`, `align_time.py`.
+  * Produce windowed comment groups.
+* Deliverable: 100 ingested games; windowed `.jsonl` ready for teacher.
+
+**Day 2 — Teacher & SFT pairs**
+
+* Tasks:
+
+  * Implement `teacher.py` template writer + weak sentiment rules.
+  * Run over windows → produce 10k SFT pairs.
+  * Validate sample outputs against timeline schema.
+* Deliverable: `sft_data.jsonl` (10k pairs), baseline stats.
+
+**Day 3 — Fine-tune & evaluate**
+
+* Tasks:
+
+  * Quick QLoRA run on 8B-instruct (3 epochs).
+  * Implement `eval_harness.py`: JSON validity, coverage, sentiment F1.
+  * Tweak teacher thresholds; re-run small DPO pass if needed.
+* Deliverable: fine-tuned model checkpoint + evaluation report.
+
+**Day 4 — Demo & polish**
+
+* Tasks:
+
+  * Build `serve.py` + Streamlit `streamlit_app.py`.
+  * Hook model to demo; implement copy/download JSON.
+  * Run human spot checks; fix schema failures.
+* Deliverable: Streamlit demo + API endpoint ready for presentation.
+
+---
+
+## 14) Roles / ownership (example for 1–2 people)
+
+* **Data engineer (you):** ingest, time alignment, windowing.
+* **ML engineer (you):** teacher pipeline, fine-tune, eval harness.
+* **Full-stack (you):** Streamlit app + serve wrapper.
+  *(If solo, split tasks by day per plan above.)*
+
+---
+
+## 15) Risks & mitigations
+
+| Risk                                     | Impact | Mitigation                                                                                       |
+| ---------------------------------------- | -----: | ------------------------------------------------------------------------------------------------ |
+| Noisy Reddit chatter → irrelevant events | Medium | Upvote weighting, token caps, keyword filters; start with high-signal windows (high engagement). |
+| Time alignment errors                    |   High | Fall back to real-time bins; surface `notes` indicating uncertain mapping.                       |
+| Hallucinated player claims               |   High | Evidence token constraint + DPO penalize unsupported names.                                      |
+| Schema breakage                          |   High | Strict validator + auto-retry with constrained instruction.                                      |
+| Sentiment bias from loud users           | Medium | Cap per-user influence; trimmed mean.                                                            |
+
+---
+
+## 16) Acceptance criteria (MVP)
+
+1. Run pipeline on 100 games → produce `sft_data.jsonl`.
+2. Fine-tuned model produces valid JSON for ≥98% of test games.
+3. Coverage ≥70% on held-out games by `eval_harness.py`.
+4. Streamlit demo loads a finished game, shows timeline with hoverable comments, and “Copy JSON” exports the contract.
+
+---
+
+## 17) Example SFT pair (reminder)
+
+**Input (truncated)**
+
+```
+[CONTEXT]
+game_id=LAL@DAL 2019-12-01
+quarter=Q3 window=03:00–02:00 score_before=68-73 score_after=74-73
+
+[COMMENTS]
+• luka cooking again 😭
+• 8-0 run wtf are we doing
+• KCP finally hits one!
+• refs missing obvious travels
+```
+
+**Output**
+
+```json
+{"timeline":[{"ts":"Q3 02:13","event":"Mavs push an 8–0 run behind Doncic drives; Lakers stop the slide with a KCP three.","fan_sentiment":"mixed"}]}
+```
+
+---
+
+## 18) Next immediate steps (you can run this now)
+
+1. Assemble 100 games (reddit + pbp) into `data/` (Day 1).
+2. I can generate the scaffold files (`ingest_reddit.py`, `align_time.py`, `teacher.py`, `make_sft.py`, `train_sft.py`, `streamlit_app.py`) ready-to-run — say the word and I’ll drop the scaffold code so you can plug data and start training immediately.
+
+---
